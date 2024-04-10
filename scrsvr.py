@@ -116,6 +116,8 @@ def scrsvr():
         os.system('control desk.cpl,,@screensaver')
     elif len(sys.argv) == 2 and sys.argv[1] == '/install':
         os.system(f'start install.bat {__file__}')
+    elif len(sys.argv) == 2 and sys.argv[1] == '/config':
+        os.system(f'notepad {config_name()}')
     else:
         assert 0
 
