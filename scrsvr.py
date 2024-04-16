@@ -22,10 +22,22 @@ def load_settings():
     config = configparser.ConfigParser(delimiters='=')
     config.read(config_name())
     param = types.SimpleNamespace()
+    param.set = config.get('config', 'set')
+    # default
     param.delay = config.getint('config', 'delay', fallback=10)
     param.order = config.get('config', 'order', fallback='rand')
-    param.images = config.get('images', config.get('config', 'images'))
-    return param
+    # actual
+    param.images = config.get(param.set, 'images')
+    param.delay = config.getint(param.set, 'delay', fallback=param.delay)
+    param.order = config.get(param.set, 'order', fallback=param.order)
+    param.index = config.getint(param.set, 'index', fallback=0)
+    return config, param
+
+
+def save_settings(config, param):
+    config.set(param.set, 'index', str(param.index))
+    with open(config_name(), 'wt') as configfile:
+        config.write(configfile)
 
 
 SCREEN_SAVER_CLOSING_EVENTS = ['<Any-KeyPress>', '<Any-Button>', '<Motion>']
@@ -48,7 +60,7 @@ class App(tk.Tk):
         self.bind_all('<Any-Button>', lambda event: self.close())
         self.bind_all('<Motion>', lambda event: self.close())
 
-        self.param = load_settings()
+        self.config, self.param = load_settings()
         self.time = time.time()
         pattern = self.param.images
         self.images = []
@@ -62,14 +74,19 @@ class App(tk.Tk):
             self.update_screen()
 
     def close(self, event=None):
+        save_settings(self.config, self.param)
         self.destroy()
 
     def update_screen(self):
-        window_width = self.winfo_width()
-        window_height = self.winfo_height()
-        self.imagepath = random.choice(self.images)
+        if self.param.order == 'rand':
+            self.imagepath = random.choice(self.images)
+        else:
+            self.param.index = (self.param.index + 1) % len(self.images)
+            self.imagepath = self.images[self.param.index]
         self.img = Image.open(self.imagepath)
 
+        window_width = self.winfo_width()
+        window_height = self.winfo_height()
         image_width, image_height = self.img.size
         new_width = window_width
         new_height = new_width * image_height / image_width
